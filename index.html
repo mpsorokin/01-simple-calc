@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Web Calculator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .calculator {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .display {
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: right;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            overflow: hidden; /* Prevent text overflow */
+            position: relative; /* For history dropdown */
+        }
+
+        .display-expression {
+            font-size: 0.8em;
+            color: #777;
+            min-height: 1em; /* Ensure space even when empty */
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis; /* Show ellipsis for long expressions */
+        }
+
+        .display-result {
+            font-size: 1.8em;
+            font-weight: bold;
+            min-height: 1.2em; /* Ensure space even when empty */
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis; /* Show ellipsis for long results */
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 10px;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transition: background-color 0.2s ease;
+            outline: none; /* Remove focus outline */
+        }
+
+        button:hover {
+            background-color: #eee;
+        }
+
+        button.operator {
+            background-color: #f0f5ff;
+            color: #337ab7;
+        }
+
+        button.operator:hover {
+            background-color: #e0e8f5;
+        }
+
+        button.equal {
+            background-color: #5cb85c;
+            color: white;
+        }
+
+        button.equal:hover {
+            background-color: #4cae4c;
+        }
+
+        button.clear {
+            background-color: #d9534f;
+            color: white;
+        }
+
+        button.clear:hover {
+            background-color: #c9302c;
+        }
+
+        button.memory {
+            background-color: #fff3cd;
+            color: #8a6d3b;
+        }
+
+        button.memory:hover {
+            background-color: #ffe08a;
+        }
+
+        .history-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow-y: auto; /* Enable vertical scrolling */
+            max-height: 200px; /* Limit dropdown height */
+            width: 100%;
+            z-index: 10; /* Ensure it's on top of other elements */
+            display: none; /* Hidden by default */
+        }
+
+        .history-dropdown.show {
+            display: block;
+        }
+
+        .history-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+            text-align: left;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .memory-indicator {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 0.8em;
+            color: #8a6d3b;
+            display: none; /* Hidden by default */
+        }
+
+        .memory-indicator.show {
+            display: block;
+        }
+
+        /* Responsive Design (Basic) */
+        @media (max-width: 400px) {
+            .calculator {
+                width: 95%;
+            }
+            .buttons {
+                grid-template-columns: repeat(4, 1fr); /* Adjust columns if needed for smaller screens */
+            }
+            button {
+                padding: 12px; /* Slightly smaller padding on small screens */
+                font-size: 1em; /* Slightly smaller font size */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="memory-indicator" id="memoryIndicator">M</div>
+            <div class="display-expression" id="expression"></div>
+            <div class="display-result" id="result">0</div>
+            <div class="history-dropdown" id="historyDropdown">
+                <!-- History items will be added here by JavaScript -->
+            </div>
+        </div>
+        <div class="buttons">
+            <button class="memory" data-action="MC">MC</button>
+            <button class="memory" data-action="MR">MR</button>
+            <button class="memory" data-action="M+">M+</button>
+            <button class="memory" data-action="M-">M-</button>
+
+            <button class="operator" data-value="(">(</button>
+            <button class="operator" data-value=")">)</button>
+            <button class="operator" data-action="percentage">%</button>
+            <button class="clear" data-action="clear">C</button>
+
+            <button data-value="7">7</button>
+            <button data-value="8">8</button>
+            <button data-value="9">9</button>
+            <button class="operator" data-value="/">/</button>
+
+            <button data-value="4">4</button>
+            <button data-value="5">5</button>
+            <button data-value="6">6</button>
+            <button class="operator" data-value="*">×</button>
+
+            <button data-value="1">1</button>
+            <button data-value="2">2</button>
+            <button data-value="3">3</button>
+            <button class="operator" data-value="-">-</button>
+
+            <button data-value="0">0</button>
+            <button data-value=".">.</button>
+            <button class="operator" data-value="+">+</button>
+            <button class="equal" data-action="equals">=</button>
+
+            <button class="operator" data-action="backspace">←</button>
+            <button class="operator" data-action="sqrt">√</button>
+            <button class="operator" data-action="pow">^</button>
+            <button class="operator" data-action="history">History</button>
+        </div>
+    </div>
+
+    <script>
+        const displayExpression = document.getElementById('expression');
+        const displayResult = document.getElementById('result');
+        const buttons = document.querySelector('.buttons');
+        const historyDropdown = document.getElementById('historyDropdown');
+        const memoryIndicator = document.getElementById('memoryIndicator');
+
+        let currentExpression = '';
+        let currentResult = '0';
+        let memoryValue = null;
+        let history = [];
+        let memoryActive = false;
+
+        function updateDisplay() {
+            displayExpression.textContent = currentExpression;
+            displayResult.textContent = currentResult;
+            memoryIndicator.classList.toggle('show', memoryActive);
+        }
+
+        function clearDisplay() {
+            currentExpression = '';
+            currentResult = '0';
+            updateDisplay();
+        }
+
+        function backspace() {
+            if (currentResult !== '0' && currentResult !== 'Error') { // Only backspace on result if it's not initial '0' or Error
+                currentResult = currentResult.slice(0, -1);
+                if (currentResult === '') {
+                    currentResult = '0';
+                }
+                updateDisplay();
+            } else if (currentExpression.length > 0) { // Backspace on expression
+                currentExpression = currentExpression.slice(0, -1);
+                updateDisplay();
+            }
+        }
+
+
+        function handleNumberInput(number) {
+            if (currentResult === '0' || currentResult === 'Error') {
+                currentResult = number;
+            } else {
+                currentResult += number;
+            }
+            updateDisplay();
+        }
+
+        function handleDecimalInput() {
+            if (!currentResult.includes('.')) {
+                currentResult += '.';
+                updateDisplay();
+            }
+        }
+
+        function handleOperatorInput(operator) {
+            if (currentResult !== 'Error') { // Prevent adding operators after error
+                currentExpression = currentExpression + currentResult + operator;
+                currentResult = '0';
+                updateDisplay();
+            }
+        }
+
+        function calculateResult() {
+            if (currentExpression === '') return; // Nothing to calculate
+
+            let expressionToEvaluate = currentExpression + currentResult;
+
+            try {
+                // Basic evaluation with order of operations (PEMDAS/BODMAS) using eval (for simplicity in this example)
+                // **WARNING: Using eval() can be risky with untrusted input in production applications.
+                // For a more robust solution, consider using a parsing library or implementing a proper parser.**
+                // However, for a tech task demonstrating logic, eval is acceptable with the caveat mentioned.
+
+                // Replace operators for eval compatibility
+                expressionToEvaluate = expressionToEvaluate.replace('×', '*').replace('^', '**').replace('√', 'Math.sqrt(').replace('%', '/100*');
+
+                // Handle percentage correctly - should apply to the previous number, not just current result.
+                // This simplified eval approach might not handle complex percentage scenarios perfectly.
+                // A more robust parser is needed for advanced percentage calculations.
+
+
+                let calculatedResult = eval(expressionToEvaluate);
+
+                if (!isFinite(calculatedResult)) {
+                    throw new Error("Division by zero or Infinity");
+                }
+
+                currentResult = String(calculatedResult);
+                currentExpression = ''; // Clear expression after evaluation
+                history.push(`${expressionToEvaluate.replace('**', '^').replace('*', '×')} = ${currentResult}`); // Store in history
+                updateHistoryDropdown();
+                updateDisplay();
+
+            } catch (error) {
+                console.error("Calculation Error:", error);
+                currentResult = 'Error';
+                updateDisplay();
+            }
+        }
+
+        function memoryStore() {
+            if (currentResult !== 'Error') {
+                memoryValue = parseFloat(currentResult);
+                memoryActive = true;
+                updateDisplay();
+            }
+        }
+
+        function memoryRecall() {
+            if (memoryValue !== null) {
+                currentResult = String(memoryValue);
+                updateDisplay();
+            }
+        }
+
+        function memoryAdd() {
+            if (memoryValue !== null && currentResult !== 'Error') {
+                memoryValue += parseFloat(currentResult);
+                memoryActive = true;
+                updateDisplay();
+            } else if (memoryValue === null && currentResult !== 'Error') { // If memory is empty, M+ acts like MS
+                memoryStore();
+            }
+        }
+
+        function memorySubtract() {
+            if (memoryValue !== null && currentResult !== 'Error') {
+                memoryValue -= parseFloat(currentResult);
+                memoryActive = true;
+                updateDisplay();
+            } else if (memoryValue === null && currentResult !== 'Error') { // If memory is empty, M- still subtracts from 0
+                memoryValue = 0 - parseFloat(currentResult);
+                memoryActive = true;
+                updateDisplay();
+            }
+        }
+
+        function memoryClear() {
+            memoryValue = null;
+            memoryActive = false;
+            updateDisplay();
+        }
+
+        function squareRoot() {
+            if (currentResult !== 'Error') {
+                const num = parseFloat(currentResult);
+                if (num < 0) {
+                    currentResult = 'Error'; // Handle square root of negative number
+                } else {
+                    currentResult = String(Math.sqrt(num));
+                }
+                updateDisplay();
+            }
+        }
+
+        function power() {
+            if (currentResult !== 'Error') {
+                handleOperatorInput('^'); // Treat ^ as an operator for later evaluation
+            }
+        }
+
+        function percentage() {
+            if (currentResult !== 'Error') {
+                handleOperatorInput('%'); // Treat % as an operator for later evaluation
+            }
+        }
+
+        function toggleHistoryDropdown() {
+            historyDropdown.classList.toggle('show');
+        }
+
+        function updateHistoryDropdown() {
+            historyDropdown.innerHTML = ''; // Clear previous history
+            history.slice().reverse().forEach((item, index) => { // Reverse to show latest first
+                const historyItem = document.createElement('div');
+                historyItem.classList.add('history-item');
+                historyItem.textContent = item;
+                historyItem.addEventListener('click', () => {
+                    currentExpression = item.split('=')[0].trim() + '+'; // Load expression part to calculator, ready for next op
+                    currentResult = '0';
+                    updateDisplay();
+                    toggleHistoryDropdown(); // Close dropdown after selection
+                });
+                historyDropdown.appendChild(historyItem);
+            });
+        }
+
+        buttons.addEventListener('click', event => {
+            if (event.target.tagName === 'BUTTON') {
+                const value = event.target.dataset.value;
+                const action = event.target.dataset.action;
+
+                if (value) {
+                    if (/[0-9]/.test(value)) {
+                        handleNumberInput(value);
+                    } else if (value === '.') {
+                        handleDecimalInput();
+                    } else {
+                        handleOperatorInput(value);
+                    }
+                } else if (action) {
+                    switch (action) {
+                        case 'clear':
+                            clearDisplay();
+                            break;
+                        case 'backspace':
+                            backspace();
+                            break;
+                        case 'equals':
+                            calculateResult();
+                            break;
+                        case 'MC':
+                            memoryClear();
+                            break;
+                        case 'MR':
+                            memoryRecall();
+                            break;
+                        case 'M+':
+                            memoryAdd();
+                            break;
+                        case 'M-':
+                            memorySubtract();
+                            break;
+                        case 'sqrt':
+                            squareRoot();
+                            break;
+                        case 'pow':
+                            power();
+                            break;
+                        case 'percentage':
+                            percentage();
+                            break;
+                        case 'history':
+                            toggleHistoryDropdown();
+                            break;
+                    }
+                }
+            }
+        });
+
+        // Keyboard Support
+        document.addEventListener('keydown', event => {
+            const key = event.key;
+            if (/[0-9]/.test(key)) {
+                handleNumberInput(key);
+            } else if (key === '.') {
+                handleDecimalInput();
+            } else if (['+', '-', '*', '/', '×', '%'].includes(key)) {
+                handleOperatorInput(key === '*' ? '×' : key); // Use × for display consistency
+            } else if (key === '=' || key === 'Enter') {
+                calculateResult();
+            } else if (key === 'Escape' || key === 'Delete') {
+                clearDisplay();
+            } else if (key === 'Backspace') {
+                backspace();
+            } else if (key === '(') {
+                handleOperatorInput('(');
+            } else if (key === ')') {
+                handleOperatorInput(')');
+            }
+        });
+
+        // Initial display update
+        updateDisplay();
+    </script>
+</body>
+</html>
